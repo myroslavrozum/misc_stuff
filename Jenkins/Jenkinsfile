@@ -1,0 +1,115 @@
+#!/usr/bin/groovy
+
+import java.text.SimpleDateFormat
+
+def dateFormat = new SimpleDateFormat("yyyy_MM")
+def publishedName = "shared_efs_usage_" + dateFormat.format(new Date()) + ".csv"
+
+def transformIntoStep(inputString) {
+  return {
+    node('otsjenkins-slaves-publisher_micro') {
+      unstash "shell-scripts"
+      script {
+        sh (script: """
+            FS_SUBSCRIPTIONS='${FS_SUBSCRIPTIONS}' \
+            FS_to_TAG='${inputString}' \
+            ./map_data.sh
+            """,
+        returnStdout: true)
+      }
+      stash name: "artifacts",  includes: "*.csv"
+    }
+    node('master'){
+      unstash "artifacts"
+    }
+  }
+}
+
+pipeline {
+  agent none
+  triggers {
+    cron('H 0 1 * *')
+  }
+  parameters {
+    string( name: 'FS_ID',
+      defaultValue: 'fs-1 fs-2',
+      description: '')
+  }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('Checkout scripts') {
+      steps {
+        node('master') {
+          git url: 'https://github.com/boogawooga/git.git',
+              credentialsId: '11111111-1111-1111-1111-111111111111',
+              branch: 'master'
+        }
+      }
+    }
+    stage('Prepare Variables') {
+      steps {
+        node('master')//customWorkspace)
+        {
+          dir('./scripts/Jenkins/') {
+            stash name: "shell-scripts", includes: "*.sh"
+          }
+        }
+        node('jenkins-slaves-t2_micro')//('master')
+        {
+          unstash "shell-scripts"
+          script {
+            def raw_data = sh (script: """
+              FS_ID='${params.FS_ID}' \
+              ./generate_vars.sh
+              """,
+              returnStdout: true).trim()
+            FS_TAGS = raw_data.split('\n')[0]
+            FS_SUBSCRIPTIONS = raw_data.split('\n')[1]
+          }
+        }
+      }
+    }
+    stage('Collect statistics in parallel') {
+      steps {
+        script {
+          branches = FS_TAGS.split().collectEntries {
+            [ "branch_${it}" : transformIntoStep(it) ]
+          }
+          branches.failFast = true
+          parallel branches
+        }
+      }
+    }
+    stage('Finalize results') {
+      steps {
+        node ('master')
+        {
+          script {
+              sh script: """ \
+              ls -la ./*.csv
+              files=(\$(ls ./*.csv))
+              echo 'Subscription,Usage' > ${publishedName}
+              for file in \${files[@]};
+              do
+                  cat \$file >> ${publishedName}
+              done
+              """, returnStdout: true
+          }
+        }
+      }
+    }
+  }
+  post {
+    success {
+      node ('master')
+      {
+        archive includes: publishedName
+        deleteDir()
+      }
+    }
+  }
+}
