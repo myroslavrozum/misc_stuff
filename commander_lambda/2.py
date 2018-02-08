@@ -21,7 +21,6 @@
 def drop_the_bomb(srcs, dst, visited=[], iteration=0):
     board_min = 0
     board_max = 63
-    global paths
     iteration += 1
     poi = []
     for src in srcs:
@@ -42,20 +41,17 @@ def drop_the_bomb(srcs, dst, visited=[], iteration=0):
                      map(lambda d: src + d, directions))
         
         visited.append(src)
-    if dst in poi:
-        #paths = iteration if ( iteration < paths or paths == 0 ) else paths
-        return iteration
-    else:
-        return drop_the_bomb(poi, dst, visited, iteration)
+
+    return iteration if dst in poi else drop_the_bomb(poi, dst, visited, iteration)
     visited = []
 
 def answer(src, dst):
     print "Path: %s ==> %s" % (src, dst)
-    print x([src], dst)
+    print drop_the_bomb([src], dst)
 
 #answer(19, 36)
 #answer(9, 36)
 #answer(0, 1)
 #answer(0, 3)
 #answer(19, 30)
-#answer(0, 61)
+answer(0, 61)
