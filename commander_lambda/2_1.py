@@ -9,14 +9,14 @@ def calculate(generously, amount, hand_out=1):
 
     if sum(paid) < amount:
         leftover = amount - sum(paid)
-        if validate(lefover, paid):
+        if validate(leftover, paid):
             paid.append(leftover)
 
     return len(paid)
 
 def validate(num, paid):
     if num > paid[-1]*2 :
-        retrun False
+        return False
     if len(paid) >= 2 and num < paid[-2] + paid[-1]:
         return False
 
@@ -26,16 +26,6 @@ def answer(total_lambs):
     return (calculate(False, total_lambs, 1) -
             calculate(True, total_lambs, 1))
 
-print "10:  %s" % answer(10)
-print "====================================="
-print "143: %s" % answer(143)
-print "====================================="
-print "1: %s" % answer(1)
-print "====================================="
-print "10000000000: %s" % answer(10000000000)
-print "====================================="
-print "0: %s" % answer(0)
-print "====================================="
-print "376: %s" % answer(376)
-print "====================================="
-
+for i in [10, 143, 1, 100000000000, 0, 9, 376]:
+    print "%s:  %s" % (i, answer(i))
+    print "====================================="
