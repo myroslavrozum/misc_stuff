@@ -1,53 +1,58 @@
-def isValidMove(maze, move):
-    (y, x) = move
-    return not (x >= len(maze[0]) or y >= len(maze)
-                or x < 0 or y < 0 or maze[y][x] == 1)
-
-def setTheWall(m, wall, state=0):
-    (y, x) = wall
-    tmp = []
-    for row in m:
-        tmp.append(row[:])
-    tmp[y][x] = state
-    return tmp
-
-def findValidMoves(maze, position):
+def find_valid_moves(maze, position):
     (y, x) = position
     return [ (y+dy, x+dx ) for (dy, dx)
             in [(1, 0), (0, 1), (-1,0), (0, -1)]
-            if isValidMove(maze, (y+dy, x+dx))]
+            if not (x+dx >= len(maze[-1]) or y+dy >= len(maze)
+                    or x+dx < 0 or y+dx < 0 or maze[y+dy][x+dx] == 1) ]
 
-def findPath(maze, visited=[], position=(0,0)):
-    m_y = len(maze)-1
-    m_x = len(maze[0])-1
-    validMoves = filter(lambda x: x not in visited, findValidMoves(maze, position))
-    visited.append(position)
-    if position == (m_y,m_x):
-        print "FOUND Position: %s, Visited: %s" % (position, visited)
-        return visited
-    if len(validMoves) == 0:
-        print "STUCK at %s, Visited: %s" % (str(position), visited)
-        position = findTheFork(maze, visited)
-        if position is None:
-            return
-        visited.append(position)
-        print "forkAt: %s at %s" % (str(position), visited.index(position))
-        for r in maze:
-            print r
-    validMoves = filter(lambda x: x not in visited, findValidMoves(maze, position))
-    for move in validMoves:
-        print "Position: %s, Moves: %s, Visited: %s" % (position, validMoves, visited)
-        return visited if move in visited else findPath(maze, visited, move)
+def build_graph(maze, graph = {}):
+    x,y = (0,0)
+    for row in maze:
+        for item in row:
+            if item == 0:
+                validMoves = find_valid_moves(maze, (y,x))
+                if (y,x) in graph:
+                    graph[str((y,x))] += validMoves
+                else:
+                    graph[str((y,x))] = validMoves
+            x += 1
+        x = 0
+        y += 1
+    return graph
 
-def findTheFork(maze, visited, previous=(0,0)):
-    if len(visited) == 0:
-        return
-    position = visited[-1]
-    validMoves = findValidMoves(maze, position)
-    notVisited = [ m for m in validMoves if m not in visited and m != previous ]
-    return position if len(notVisited) > 0 else findTheFork(maze, visited[:-1], position)
+def find_shortest_path(graph, start, end, path=[]):
+    path = path + [start]
+    if start == end:
+        return path
+    if not graph.has_key(str(start)):
+        return None
 
-def findBreakableWalls(maze):
+    shortest = None
+    for node in graph[str(start)]:
+        if node not in path:
+            newpath = find_shortest_path(graph, node, end, path)
+            if newpath:
+                if not shortest or len(newpath) < len(shortest):
+                    shortest = newpath
+    print shortest
+    return shortest
+
+def find_all_paths(graph, start, end, path=[]):
+    path = path + [start]
+    if start == end:
+        return [path]
+    if not graph.has_key(str(start)):
+        return []
+    paths = []
+    for node in graph[str(start)]:
+        if node not in path:
+            newpaths = find_all_paths(graph, node, end, path)
+            for newpath in newpaths:
+                print newpath
+                paths.append(newpath)
+    return paths
+
+def find_breakable_walls(maze):
     m = len(maze)
     breakable = []
     if m < 2:
@@ -70,64 +75,49 @@ def findBreakableWalls(maze):
             x += 1
         x = 0
         y += 1
-
     return breakable
 
-def normalize(maze):
-    x,y = (0,0)
-    results = []
-    forks = []
+def set_the_wall(maze, wall, state=0):
+    (y, x) = wall
+    tmp = []
     for row in maze:
-        for item in row:
-            if item != 1:
-                validMoves = findValidMoves(maze, (y,x))
-                if len(validMoves) > 2:
-                    forks.append(validMoves)
-            x += 1
-        x = 0
-        y += 1
-    d = {}
-    print forks
-    for f in forks:
-        for wall in f:
-            y,x = wall
-            if x in d:
-                d[x].append(y)
-            else:
-                d[x] = [y]
-    for k in d:
-        tmp_maze = maze[:]
-        if len(d[k]) > 1:
-            tmp_maze = setTheWall(tmp_maze, (d[k][0], k), 1)
-            tmp_maze = setTheWall(tmp_maze, (d[k][1], k), 1)
-            results.append(tmp_maze)
-
-    return results
+        tmp.append(row[:])
+    tmp[y][x] = state
+    return tmp
 
 def answer(maze):
-    paths = [findPath(maze, [])]
-    paths +=  [ findPath(m, []) for m in normalize(maze) ]
-    replannedMazes = [ setTheWall(maze, wall) for wall in findBreakableWalls(maze) ]
-    paths +=  [ findPath(m, []) for m in replannedMazes ]
-    lengths = [ len(p) for p in paths if p is not None]
-    if len(lengths) > 0:
-        return min(lengths)
+    lengths = []
+    paths = []
+    max_y = len(maze) - 1
+    max_x = len(maze[-1]) - 1
 
+    graph = build_graph(maze)
+    paths.append(find_shortest_path(graph, (0,0), (max_y,max_x)))
+
+    replanned_mazes = [ set_the_wall(maze, wall)
+                      for wall in find_breakable_walls(maze) ]
+    paths +=  [ find_shortest_path(build_graph(m), (0,0), (max_y,max_x))
+               for m in replanned_mazes ]
+    for path in paths:
+        if path is not None:
+            print path
+            lengths.append(len(path))
+    return min(lengths)
+    
 maze = [[0, 0, 0, 0, 0, 0],
-        [1, 1, 1, 1, 1, 0],
+        [0, 1, 1, 1, 1, 0],
         [0, 0, 0, 0, 0, 0],
         [0, 1, 1, 1, 1, 1],
-        [0, 1, 1, 0, 1, 1],
+        [0, 1, 1, 1, 1, 1],
         [0, 0, 0, 0, 0, 0]]
 
 #maze = [[0, 1, 1, 0],
 #        [0, 0, 0, 1],
 #        [1, 1, 0, 0],
 #        [1, 1, 1, 0]]
-##
 #maze = [[0,1,1],
 #	[0,1,1],
-#      [1,0,0]]
+#       [1,0,0]]
 ##
 #maze = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 #        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
@@ -147,13 +137,32 @@ maze = [[0, 0, 0, 0, 0, 0],
 #
 #maze = [[0, 0, 0, 0, 0],
 #        [1, 1, 1, 1, 0],
-#        [0, 0, 0, 0, 0],
+#        [0, 1, 0, 0, 0],
 #        [0, 1, 0, 1, 1],
 #        [0, 1, 1, 1, 1],
 #        [0, 0, 0, 0, 0]]
+
+maze = [[0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+[0, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+[0, 1, 0, 0, 0, 0, 0, 1, 1, 0],
+[0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+[0, 1, 0, 0, 0, 0, 0, 0, 1, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+[0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+[0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+
+#maze = [[0, 1, 1, 1, 1, 0],
+#        [0, 1, 0, 0, 1, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [0, 1, 1, 1, 0, 0],
+#        [0, 1, 1, 1, 0, 0],
+#        [0, 0, 0, 0, 0, 0]]
 for i in maze:
     print i
 print "============================="
 
 print answer(maze)
-#normalize(maze)
