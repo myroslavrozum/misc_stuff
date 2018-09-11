@@ -1,0 +1,147 @@
+#!/usr/bin/groovy
+
+import java.text.SimpleDateFormat
+
+def dateFormat = new SimpleDateFormat('yyyy_MM')
+def publishedDate = dateFormat.format(new Date())
+def publishedName = "shared_efs_usage_${publishedDate}.csv"
+
+// Jenkins slaves and filesystems per-VPC. Check "Manage Jenkins, Sysem
+// for slaves configuration
+def filesystemsToNodes = [
+  'jenkins-slaves-micro': ['fs-1', 'fs-2'],
+  'jenkins-slaves-xtra-micro': ['fs-3', 'fs-3']
+  ]
+
+def getFileSystemsPerSlave(jenkinsSlavesLabel) {
+    return filesystemsToNodes[jenkinsSlavesLabel].join(' ')
+}
+
+def transformIntoStep(inputString, slave) {
+  return {
+    node(slave) {
+      unstash 'shell-scripts'
+      script {
+        sh (script: """
+            FS_SUBSCRIPTIONS='${FS_SUBSCRIPTIONS[slave]}' \
+            FS_to_TAG='${inputString}' \
+            ./map_data.sh
+            """,
+        returnStdout: true)
+      }
+      stash name: "artifacts_${slave}",  includes: '*.csv'
+    }
+    node('master'){
+      unstash "artifacts_${slave}"
+    }
+  }
+}
+
+pipeline {
+  agent none
+  triggers {
+    cron('H 0 30 * *')
+  }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('Checkout scripts') {
+      steps {
+        node('master') {
+          git url: 'https://github.com/somewhere/something.git',
+              credentialsId: 'hash',
+              branch: 'master'
+        }
+      }
+    }
+    stage('Prepare Variables') {
+      steps {
+        node('master')
+        {
+          dir('./scripts/Jenkins/calculate_efs_by_tags/') {
+            stash name: 'shell-scripts', includes: '*.sh'
+          }
+        }
+
+        script {
+          FS_TAGS = [:]
+          FS_SUBSCRIPTIONS = [:]
+          filesystemsToNodes.each{ jenkinsSlave, filesystems ->
+            node(jenkinsSlave)
+            {
+              unstash 'shell-scripts'
+              script {
+                def raw_data = sh (script: """
+                  FS_ID='${filesystems.join(' ')}' \
+                  ./generate_vars.sh
+                  """,
+                  returnStdout: true).trim()
+                if (FS_TAGS[jenkinsSlave] == null) {
+                    FS_TAGS[jenkinsSlave] = raw_data.split('\n')[0]
+                } else {
+                  FS_TAGS[jenkinsSlave] += raw_data.split('\n')[0]
+                }
+                if ( FS_SUBSCRIPTIONS[jenkinsSlave] == null ) {
+                    FS_SUBSCRIPTIONS[jenkinsSlave] = raw_data.split('\n')[1]
+                } else {
+                    FS_SUBSCRIPTIONS[jenkinsSlave] += raw_data.split('\n')[1]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    stage('Collect statistics in parallel') {
+      steps {
+        script {
+          branches = [:]
+          FS_TAGS.each { slave, input_data ->
+            branches.putAll(input_data.split().collectEntries {
+              [ "branch_${it}" : transformIntoStep(it, slave) ]
+            })
+          }
+          branches.failFast = true
+          parallel branches
+        }
+      }
+    }
+    stage('Finalize results') {
+      steps {
+        node ('master')
+        {
+          script {
+              sh script: """ \
+              ls -la ./*.csv
+              files=(\$(ls ./*.csv))
+              echo 'Subscription,Usage' > ${publishedName}
+              for file in \${files[@]};
+              do
+                  cat \$file >> ${publishedName}
+              done
+              """, returnStdout: true
+          }
+        }
+      }
+    }
+  }
+  post {
+    success {
+      node ('master')
+      {
+        archive includes: publishedName
+
+        emailext (attachmentsPattern: "**/${publishedName}",
+          body: "Below you may finds EFS usage statistics for ${publishedDate}\n",
+          subject: 'EFS and special charge backs',
+          to: 'email1,email2,email3',
+          from: 'ops@womewhere.com')
+
+        deleteDir()
+      }
+    }
+  }
+}

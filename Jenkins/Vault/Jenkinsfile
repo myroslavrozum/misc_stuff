@@ -1,0 +1,59 @@
+#!/usr/bin/groovy
+
+pipeline {
+  agent { label 'master' }
+  triggers {
+    cron('@weekly')
+  }
+//  parameters {
+//    choice(
+//      name: 'ENV',
+//      choices: 'stage\nprod',
+//      description: 'environmenst name (stage, prod, etc.)')
+//  }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    disableConcurrentBuilds()
+  }
+  
+  stages {
+    stage('Init') {
+      steps {
+        print '======================================================================='
+      }
+    }
+    stage('Refresh Tokens') {
+      steps {
+        script {
+          branches = ['stage', 'prod'].collectEntries {
+            [ "branch_${it}" : {
+              println "Refreshing ${it} tokens"
+              def raw_output = sh (
+                script: """
+                ENV='${it}' \
+                USER_2_RENEW='ALL' \
+                ./scripts/Jenkins/Vault/renew-tokens.sh
+                """,
+                returnStdout: true)
+                ansiColor('xterm') {
+                  println raw_output
+                }
+            }]
+          }
+          branches.failFast = true
+          parallel branches
+        }
+      }
+    }
+    stage('End') {
+      steps {
+        print '======================================================================='
+      }
+    }
+  }
+  post {
+    success {
+      deleteDir()
+    }
+  }
+}

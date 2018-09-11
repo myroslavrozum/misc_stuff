@@ -2,7 +2,7 @@ require 'aws-sdk'
 require 'json'
 require 'net/http'
 
-Puppet::Type.type(:nbcu_eipassociation).provide(:ruby) do
+Puppet::Type.type(:org_eipassociation).provide(:ruby) do
   def exists?
     has_eip_associated?
   end

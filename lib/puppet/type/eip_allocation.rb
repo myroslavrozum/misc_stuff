@@ -1,6 +1,6 @@
 require "resolv"
 
-Puppet::Type.newtype(:nbcu_eipassociation) do
+Puppet::Type.newtype(:org_eipassociation) do
   @doc <<-EOT
   Associates existing, unallocated EIP to the instance:
     eip_association { eipname:

@@ -1,0 +1,88 @@
+#!/usr/bin/groovy
+
+def BRANCHES = ['branch1', 'branch2', 'branch3']
+
+
+pipeline {
+  agent { label 'master' }
+  triggers {
+    cron('H/30 * * * *')
+  }
+  
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '7'))
+    disableConcurrentBuilds()
+  }
+  
+  stages {
+    stage('Init') {
+      steps {
+        print "==========================================================================================="
+      }
+    }
+    stage('Checkout code') {
+      steps {
+        script {
+          def branches = BRANCHES.collectEntries {
+            [ "git_${it}" : {
+              print "Checkout ${it}"
+              dir(it) {
+                git url: 'https://github.com/somewhere/something.git',
+                      credentialsId: 'hash',
+                      branch: it
+              }
+            }]
+          }
+          branches.failFast = true
+          parallel branches
+        }
+      }
+    }
+    stage('Run Sonar') {
+      steps {
+        script {
+          def branches = BRANCHES.collectEntries {
+            [ "branch_${it}" : {
+              dir("scripts/Jenkins/RunSonarAgainstBranch/sonar/${it}/") {
+                ansiColor('xterm') {
+                  sh (
+                    script: """
+                      RELEASE_DATE=`date +%W%Y`
+                      cat sonar-project.properties |\
+                        grep -v sonar.projectVersion > sonar-project.properties.new
+                      echo "sonar.projectVersion=1.0.\${RELEASE_DATE}"\
+                        >> sonar-project.properties.new
+                      cp sonar-project.properties.new sonar-project.properties || :
+                      if [[ ! -h ./modules ]]; then
+                        ln -s ../../../../../${it}/modules/ . || :
+                      fi
+                      pwd
+                      ls -la
+                      /opt/sonar/sonar-scanner-2.9.0.670/bin/sonar-scanner \
+                        -Dsonar.login=39e7956b7c595e1881407c3ac57ff8ee827e3606 2>&1 |\
+                          tee ${it}_sonar_report.txt
+                      unlink ./modules
+                    """,
+                    returnStdout: true)
+                }
+              }
+            }]
+          }
+          branches.failFast = true
+          parallel branches
+        }
+      }
+    }
+    stage('Stop') {
+      steps {
+        print "==========================================================================================="
+      }
+    }
+  }
+  post {
+    success {
+      archive includes: "scripts/Jenkins/RunSonarAgainstBranch/sonar/*/*_sonar_report.txt"
+      //deleteDir()
+    }
+  }
+}

@@ -1,0 +1,163 @@
+#!/usr/bin/groovy
+
+def installChart(kubeEnvironment, QUAY_IO_TRIGGER_TAG) {
+  def kubeContext
+  switch ( kubeEnvironment ) {
+    case 'prod':
+      kubeContext = 'prod-cluster-context'
+      break
+    case 'qa':
+      kubeContext = 'qa-cluster-context'
+      break
+    default:
+      kubeContext = 'preprod-cluster-context'
+      break
+  }
+
+  sh "/opt/linux-amd64/helm upgrade app-${kubeEnvironment} ." +
+       " -f ${kubeEnvironment}/values.yaml" +
+       " --set namespace=${kubeEnvironment}" +
+       " --set app.image.tag=${QUAY_IO_TRIGGER_TAG}" +
+       " --kube-context=${kubeContext}"
+}
+
+def patchChart(kubeEnvironment, QUAY_IO_TRIGGER_TAG) {
+  sh "sed -ie 's/tag: .*\$/tag: ${QUAY_IO_TRIGGER_TAG}/g'" +
+    " ./${kubeEnvironment}/values.yaml"
+}
+
+def notifySlack(msgBody, channel = 'all') {
+  println msgBody
+  if (channel == 'all' || channel == 'app-notifications') {
+    slackSend (baseUrl: 'https://team1.slack.com/services/hooks/jenkins-ci/',
+            channel: '#app-notifications',
+            color: 'good',
+            message: msgBody,
+            teamDomain: 'team',
+            token: 'slacktoken1')
+  }
+
+  if (channel == 'all' || channel == 'ops-team') {
+    slackSend (baseUrl: 'https://opsteam.slack.com/services/hooks/jenkins-ci/',
+            channel: '#ops-team',
+            color: 'good',
+            message: msgBody,
+            token: 'slacktoken2')
+  }
+}
+
+pipeline {
+  agent { label 'master' }
+
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+    disableConcurrentBuilds()
+  }
+
+  parameters {
+    string(
+      defaultValue: 'repo/app',
+      description: 'Quai.Io repository triggered the job',
+      name: 'QUAY_IO_TRIGGER_REPOSITORY')
+
+    string(
+      defaultValue: 'latest',
+      description: 'Quai.Io tag triggered the job',
+      name: 'QUAY_IO_TRIGGER_TAG')
+  }
+
+  stages {
+    stage ('Init') {
+      steps {
+        println "QUAY_IO_TRIGGER_REPOSITORY:" +
+                " ${params.QUAY_IO_TRIGGER_REPOSITORY}"
+        println "QUAY_IO_TRIGGER_TAG:" +
+                " ${params.QUAY_IO_TRIGGER_TAG}"
+        script {
+          if (params.QUAY_IO_TRIGGER_TAG == 'master' ||
+              params.QUAY_IO_TRIGGER_TAG == 'latest' ||
+              params.QUAY_IO_TRIGGER_TAG == 'foo' ) {
+            currentBuild.result = 'ABORTED'
+            error "Tag must contain environment and version. Invalid tag, not deploying: ${params.QUAY_IO_TRIGGER_TAG}"
+          }
+          if (params.QUAY_IO_TRIGGER_TAG.contains('prod') ||
+            params.QUAY_IO_TRIGGER_TAG.contains('stage')) {
+            def jobName = env.JOB_NAME.replace('/', '%2F')
+            def msgBody = "Received a new tag. " +
+                      "${params.QUAY_IO_TRIGGER_REPOSITORY}/${params.QUAY_IO_TRIGGER_TAG}\n" +
+                      "${env.JENKINS_URL}/blue/organizations/jenkins/${jobName}" +
+                      "/detail/test_build_approval/${env.BUILD_NUMBER}/pipeline"
+            notifySlack(msgBody, 'app-notifications')
+          }
+        }
+      }
+    }
+
+    stage('Checkout charts') {
+      steps {
+        git url: 'https://github.com/somewhere/charts/',
+            credentialsId: 'hash',
+            branch: 'master'
+      }
+    }
+
+    stage('Patch and install chart') {
+      steps {
+        dir('./dir/app') {
+          script {
+            if (params.QUAY_IO_TRIGGER_TAG.contains('prod') ||
+                params.QUAY_IO_TRIGGER_TAG.contains('stage')) {
+              def jobName = env.JOB_NAME.replace('/', '%2F')
+              def msgBody = "Patching and installing... " +
+                          "${params.QUAY_IO_TRIGGER_REPOSITORY}/${params.QUAY_IO_TRIGGER_TAG}\n" +
+                          "${env.JENKINS_URL}/blue/organizations/jenkins/${jobName}" +
+                          "/detail/test_build_approval/${env.BUILD_NUMBER}/pipeline"
+              notifySlack(msgBody, 'app-notifications')
+            }
+            def kubeEnvironment = params.QUAY_IO_TRIGGER_TAG.contains('-') ?
+                                  params.QUAY_IO_TRIGGER_TAG.split('-')[0] : 'dev'
+
+            if ( kubeEnvironment == 'prod' ) {
+              def jobName = env.JOB_NAME.replace('/', '%2F')
+              def msgBody = "Please go to ${env.JENKINS_URL}/blue/organizations/jenkins/${jobName}" +
+                            "/detail/test_build_approval/${env.BUILD_NUMBER}/pipeline"
+              notifySlack(msgBody)
+
+              mail (to: 'email1,email2,email3',
+                from: 'techops@company.com',
+                subject: "App deployment to ${kubeEnvironment} is waiting for validation",
+                body: msgBody);
+              timeout(time:15, unit:'MINUTES') {
+                input message: "Deploy to ${kubeEnvironment}?",
+                      submitter: 'jenkinsgroup1,jenkinsgroup2'
+              }
+            }
+            patchChart(kubeEnvironment, params.QUAY_IO_TRIGGER_TAG)
+            installChart(kubeEnvironment, params.QUAY_IO_TRIGGER_TAG)
+          }
+        }
+      }
+    }
+
+    stage('Commit, push and register PR') {
+      steps {
+        sh "git checkout -b ${params.QUAY_IO_TRIGGER_TAG}"
+        sh "git commit -am 'New tag: ${params.QUAY_IO_TRIGGER_TAG}'"
+        sh "git push --repo 'git@github.com:repo/charts.git'"
+        script {
+          def pullRequest = sh (
+            script: "/opt/hub-linux-amd64-2.3.0-pre10/bin/hub pull-request -m 'Add ${params.QUAY_IO_TRIGGER_TAG}'",
+            returnStdout: true).trim()
+          def msgBody = "${params.QUAY_IO_TRIGGER_REPOSITORY} : ${params.QUAY_IO_TRIGGER_TAG} => ${pullRequest}"
+          notifySlack(msgBody, 'opsteam')
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      deleteDir()
+    }
+  }
+}
