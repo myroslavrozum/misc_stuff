@@ -1,0 +1,19 @@
+info:
+  description: A simple replicated service in a Kubernetes cluster.
+  author: Google, Inc.
+
+required:
+- clusterType
+
+properties:
+  clusterType:
+    type: string
+    description: Type for cluster to deploy into.
+  image:
+    type: string
+    description: Docker image to run.
+  port:
+    type: integer
+    description: Port on which service runs.
+    default: 8080
+

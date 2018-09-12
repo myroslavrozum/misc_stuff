@@ -1,0 +1,69 @@
+{% set NAME_PREFIX = env['deployment'] + '-' + env['name'] %}
+{% set CLUSTER_NAME = NAME_PREFIX %}
+{% set TYPE_NAME = NAME_PREFIX + '-type' %}
+{% set K8S_ENDPOINTS = {'': 'api/v1', '-v1beta1-extensions': 'apis/extensions/v1beta1'} %}
+
+resources:
+- name: {{ CLUSTER_NAME }}
+  type: gcp-types/container-v1:projects.zones.clusters
+  properties:
+    zone: {{ properties["zone"] }}
+    cluster:
+      name: {{ CLUSTER_NAME }}
+      nodePools:
+      - name: {{ env["deployment"] }}-nodespool
+        initialNodeCount: {{ properties['initialNodeCount']}}
+        autoscaling:
+          enabled: true
+          minNodeCount: {{ properties['initialNodeCount']}}
+          maxNodeCount: {{ properties['maxNodeCount']}}
+        management:
+          autoUpgrade: false
+          autoRepair: false
+        config:
+          machineType: f1-micro
+          diskSizeGb: 10
+          oauthScopes:
+          - https://www.googleapis.com/auth/compute
+          - https://www.googleapis.com/auth/devstorage.read_only
+          - https://www.googleapis.com/auth/logging.write
+          - https://www.googleapis.com/auth/monitoring
+          metadata:
+            purpose: learn
+          preemptible: true
+
+{% for typeSuffix, endpoint in K8S_ENDPOINTS.iteritems() %}
+- name: {{ TYPE_NAME }}{{ typeSuffix }}
+  type: deploymentmanager.v2beta.typeProvider
+  properties:
+    options:
+      validationOptions:
+        # Kubernetes API accepts ints, in fields they annotate with string.
+        # This validation will show as warning rather than failure for
+        # Deployment Manager.
+        # https://github.com/kubernetes/kubernetes/issues/2971
+        schemaValidation: IGNORE_WITH_WARNINGS
+      # According to kubernetes spec, the path parameter 'name'
+      # should be the value inside the metadata field
+      # https://github.com/kubernetes/community/blob/master/contributors/devel/api-conventions.md
+      # This mapping specifies that
+      inputMappings:
+      - fieldName: name
+        location: PATH
+        methodMatch: ^(GET|DELETE|PUT)$
+        value: $.ifNull($.resource.properties.metadata.name, $.resource.name)
+      - fieldName: metadata.name
+        location: BODY
+        methodMatch: ^(PUT|POST)$
+        value: $.ifNull($.resource.properties.metadata.name, $.resource.name)
+      - fieldName: Authorization
+        location: HEADER
+        value: >
+          $.concat("Bearer ", $.googleOauth2AccessToken())
+    descriptorUrl: https://$(ref.{{ CLUSTER_NAME }}.endpoint)/swaggerapi/{{ endpoint }}
+{% endfor %}
+
+outputs:
+{% for typeSuffix, endpoint in K8S_ENDPOINTS.iteritems() %}
+- name: clusterType{{ typeSuffix }}
+  value: {{ TYPE_NAME }}{{ typeSuffix }}

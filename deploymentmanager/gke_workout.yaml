@@ -1,0 +1,15 @@
+imports:
+- path: cluster.jinja
+- path: service.jinja
+
+resources:
+- name: cluster
+  type: cluster.jinja
+  properties:
+    zone: us-east4-c
+
+- name: service
+  type: service.jinja
+  properties:
+    clusterType: $(ref.cluster.clusterType)
+    image: gcr.io/deployment-manager-examples/nodejsservicestatic
