@@ -8,6 +8,5 @@ kubectl apply -f ./deployment.yaml
 kubectl expose deployment prometheus  --type=LoadBalancer --name=prometheus-service
 
 cd ../../build/
-gsutil cp gs://gke-workout-scripts/prometheus.yml .
 gcloud builds submit --config=./cloudbuild_Dockerfile.yaml
 
