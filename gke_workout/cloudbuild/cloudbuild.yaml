@@ -1,11 +1,11 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/gke-workout/prometheus-image', '.']
+  args: ['build', '-t', 'gcr.io/sandbox-217104/prometheus-image', '.']
   timeout: 500s
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/gke-workout/prometheus-image']
+  args: ['push', 'gcr.io/sandbox-217104/prometheus-image']
 - name: 'gcr.io/cloud-builders/kubectl'
-  args: ['set', 'image', 'deployment/prometheus', 'prometheus-image=gcr.io/gke-workout/prometheus-image']
+  args: ['set', 'image', 'deployment/prometheus', 'prometheus-image=gcr.io/sandbox-217104/prometheus-image']
   env:
   - 'CLOUDSDK_COMPUTE_ZONE=us-east4-c'
   - 'CLOUDSDK_CONTAINER_CLUSTER=gke-workout-cluster'

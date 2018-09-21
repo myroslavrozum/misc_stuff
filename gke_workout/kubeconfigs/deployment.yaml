@@ -37,7 +37,7 @@ spec:
         imagePullPolicy: Always
         name: cadvisor
         ports:
-        - containerPort: 8080
+        - containerPort: 9090
           protocol: TCP
         resources: {}
         terminationMessagePath: /dev/termination-log
