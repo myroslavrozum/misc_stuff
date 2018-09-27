@@ -1,0 +1,42 @@
+    app: "graphana"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "graphana"
+  template:
+    metadata:
+      labels:
+        app: "graphana"
+    spec:
+      containers:
+      - name: "grafana"
+        image: "grafana/grafana:latest"
+        ports:
+          - containerPort: 3000
+            protocol: TCP
+        env:
+        - name: "GF_SECURITY_ADMIN_PASSWORD"
+          valueFrom:
+            configMapKeyRef:
+              key: "GF_SECURITY_ADMIN_PASSWORD"
+              name: "graphana-config"
+
+      - name: "cadvisor"
+        image: "google/cadvisor"
+---
+apiVersion: "autoscaling/v1"
+kind: "HorizontalPodAutoscaler"
+metadata:
+  name: "graphana-hpa"
+  namespace: "monitoring"
+  labels:
+    app: "graphana"
+spec:
+  scaleTargetRef:
+    kind: "Deployment"
+    name: "graphana"
+    apiVersion: "apps/v1beta1"
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
