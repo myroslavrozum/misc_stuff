@@ -1,0 +1,17 @@
+steps:
+- name: 'docker/compose:latest'
+  args: ['up', '-d']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['tag', 'workspace_app:latest', 'gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
+images: ['gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
+  timeout: 500s
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['set', 'image', 'deployment/my-deployment', 'my-container=gcr.io/gke-workout/my-image']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=us-east4-c'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=gke-workout-cluster'
+options:
+    machineType: 'UNSPECIFIED'
+timeout: 660s
+tags: ['mytag1', 'mytag2']
+

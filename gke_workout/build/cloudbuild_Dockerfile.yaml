@@ -5,7 +5,7 @@ steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/sandbox-217104/prometheus-image']
 - name: 'gcr.io/cloud-builders/kubectl'
-  args: ['set', 'image', 'deployment/prometheus', 'prometheus-image=gcr.io/sandbox-217104/prometheus-image']
+  args: ['set', 'image', 'deployment/prometheus-deployment', 'prometheus-image=gcr.io/sandbox-217104/prometheus-image', '--namespace=monitoring']
   env:
   - 'CLOUDSDK_COMPUTE_ZONE=us-east4-c'
   - 'CLOUDSDK_CONTAINER_CLUSTER=gke-workout-cluster'
@@ -13,3 +13,4 @@ options:
     machineType: 'UNSPECIFIED'
 timeout: 660s
 tags: ['mytag1', 'mytag2']
+

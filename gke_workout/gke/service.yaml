@@ -1,0 +1,11 @@
+imports:
+- path: service.jinja
+
+resources:
+- name: service
+  type: service.jinja
+  properties:
+    clusterType: gke-workout-cluster-type
+    image: gcr.io/gke-workout/prometheus-image:latest
+    port: 9090
+

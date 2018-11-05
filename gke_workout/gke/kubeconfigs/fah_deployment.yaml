@@ -1,3 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: fah
+  name: fah
+  namespace: fah
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fah
+  strategy:
+    rollingUpdate:
       maxSurge: 1
       maxUnavailable: 1
     type: RollingUpdate
@@ -28,3 +42,16 @@
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
+status:
+  conditions:
+  - lastTransitionTime: 2018-09-26T15:14:12Z
+    lastUpdateTime: 2018-09-26T15:14:12Z
+    message: Deployment does not have minimum availability.
+    reason: MinimumReplicasUnavailable
+    status: "False"
+    type: Available
+  observedGeneration: 1
+  replicas: 3
+  unavailableReplicas: 3
+  updatedReplicas: 3
+

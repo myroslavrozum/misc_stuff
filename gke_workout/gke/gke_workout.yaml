@@ -8,8 +8,12 @@ resources:
   properties:
     zone: us-east4-c
 
-- name: service
-  type: service.jinja
-  properties:
-    clusterType: $(ref.cluster.clusterType)
-    image: gcr.io/deployment-manager-examples/nodejsservicestatic
+#- name: service
+#  type: service.jinja
+#  properties:
+#    clusterType: $(ref.cluster.clusterType)
+#    image: gcr.io/deployment-manager-examples/nodejsservicestatic
+#  metadata:
+#    dependsOn:
+#   - cluster
+

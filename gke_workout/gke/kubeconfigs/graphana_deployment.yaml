@@ -1,3 +1,20 @@
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "graphana-config"
+  namespace: "monitoring"
+  labels:
+    app: "graphana"
+data:
+  GF_SECURITY_ADMIN_PASSWORD: "secret"
+---
+apiVersion: "extensions/v1beta1"
+kind: "Deployment"
+metadata:
+  name: "graphana"
+  namespace: "monitoring"
+  labels:
     app: "graphana"
 spec:
   replicas: 1
@@ -40,3 +57,4 @@ spec:
   minReplicas: 1
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+
