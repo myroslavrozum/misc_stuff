@@ -14,6 +14,17 @@ kubectl apply -f kubeconfigs/graphana_deployment.yaml
 kubectl create namespace fah
 kubectl apply -f kubeconfigs/fah_deployment.yaml
 
+#SERVICEACCOUNT='serviceAccount:xxx@cloudbuild.gserviceaccount.com'
+
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+    --member="$SERVICEACCOUNT" \
+    --role='roles/container.developer'
+
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+    --member="$SERVICEACCOUNT" \
+    --role='roles/storage.objectCreator'
+
+
 cd ../build/
 gcloud builds submit --config=./cloudbuild_Dockerfile.yaml
 
