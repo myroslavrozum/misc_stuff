@@ -33,7 +33,7 @@ func HelloGet(w http.ResponseWriter, r *http.Request) {
 		} else if err != nil {
 			log.Fatal(err)
 		}
-    fmt.Fprint(w,"%s: %s\n", m.Name, m.Text)
+    fmt.Fprintf(w,"%s: %s\n", m.Name, m.Text)
 	}
 }
 
