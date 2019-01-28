@@ -10,7 +10,6 @@ package helloworld
 import (
         "io"
         "log"
-        "fmt"
         "strings"
         "net/http"
         "encoding/json"
