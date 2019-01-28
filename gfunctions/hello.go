@@ -16,8 +16,23 @@ import (
         "encoding/json"
 )
 
+type Service map[string]interface{}
+
 // HelloGet is an HTTP Cloud Function.
 func HelloGet(w http.ResponseWriter, r *http.Request) {
+  var myMapSlice []Service
+  //https://golang.org/pkg/encoding/json/
+  myMapSlice = append(myMapSlice,
+    Service{"id": 1, "Name": "Wedding"},
+    Service{"id": 2, "Name": "Birthday"},
+   	Service{"id": 3, "Name": "Conference"})
+
+  b, err := json.Marshal(myMapSlice)
+  if err != nil {
+    fmt.Println("error:", err)
+  }
+  fmt.Print(string(b))
+
   const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
 	{"Name": "Sam", "Text": "Who's there?"}
@@ -36,7 +51,7 @@ func HelloGet(w http.ResponseWriter, r *http.Request) {
 		} else if err != nil {
 			log.Fatal(err)
 		}
-    fmt.Fprintf(w,"%s: %s\n", m.Name, m.Text)
+    //fmt.Fprintf(w,"%s: %s\n", m.Name, m.Text)
 	}
 }
 
