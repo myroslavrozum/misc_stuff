@@ -8,10 +8,8 @@
 package helloworld
 
 import (
-        "io"
         "log"
         "fmt"
-        "strings"
         "net/http"
         "encoding/json"
 )
@@ -29,7 +27,7 @@ func ServicesGet(w http.ResponseWriter, r *http.Request) {
 
   b, err := json.Marshal(myMapSlice)
   if err != nil {
-    fmt.Fprintln(w,"error:", err)
+		log.Fatal(err)
   }
   fmt.Fprint(w, string(b))
 }
