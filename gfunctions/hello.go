@@ -29,9 +29,9 @@ func HelloGet(w http.ResponseWriter, r *http.Request) {
 
   b, err := json.Marshal(myMapSlice)
   if err != nil {
-    fmt.Println("error:", err)
+    fmt.Fprintln(w,"error:", err)
   }
-  fmt.Print(w, string(b))
+  fmt.Fprint(w, string(b))
 
   const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
