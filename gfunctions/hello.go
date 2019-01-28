@@ -8,14 +8,17 @@
 package helloworld
 
 import (
+        "io"
+        "log"
         "fmt"
+        "strings"
         "net/http"
         "encoding/json"
 )
 
 // HelloGet is an HTTP Cloud Function.
 func HelloGet(w http.ResponseWriter, r *http.Request) {
-  	const jsonStream = `
+  const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
 	{"Name": "Sam", "Text": "Who's there?"}
 	{"Name": "Ed", "Text": "Go fmt."}
