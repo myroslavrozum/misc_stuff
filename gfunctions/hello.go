@@ -31,7 +31,7 @@ func HelloGet(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     fmt.Println("error:", err)
   }
-  fmt.Print(string(b))
+  fmt.Print(w, string(b))
 
   const jsonStream = `
 	{"Name": "Ed", "Text": "Knock knock."}
