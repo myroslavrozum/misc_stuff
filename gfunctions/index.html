@@ -5,8 +5,13 @@ function loadServices() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById("services_list").innerHTML =
-      this.responseText;
+      var obj = JSON.parse(this.responseText);
+      var services = "<ul>";
+      obj.forEach(function(entry){
+        services += "<li>" + entry.Name + "</li>";
+      })
+      services += "</ul>";
+      document.getElementById("services_list").innerHTML = services;
     }
   };
   xhttp.open("GET", 'https://us-central1-event-mss.cloudfunctions.net/ServicesGet', true);
@@ -14,7 +19,7 @@ function loadServices() {
 } 
 </script>
 <h1>Services</h1>
-<div id="services_list"></div>
+<div id="services_list">TEST</div>
 </body>
 <!-- url: https://us-central1-event-mss.cloudfunctions.net/ServicesGet -->
 
