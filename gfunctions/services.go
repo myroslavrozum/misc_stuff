@@ -29,6 +29,7 @@ func ServicesGet(w http.ResponseWriter, r *http.Request) {
   if err != nil {
 		log.Fatal(err)
   }
+  w.Header().Set("Access-Control-Allow-Origin", "*")
   fmt.Fprint(w, string(b))
 }
 
