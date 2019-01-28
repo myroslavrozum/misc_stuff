@@ -1,9 +1,0 @@
-[
-  {
-    "origin": ["https://us-central1-event-mss.cloudfunctions.net/"],
-    "responseHeader": ["Content-Type"],
-    "method": ["GET"],
-    "maxAgeSeconds": 3600
-  }
-]
-
