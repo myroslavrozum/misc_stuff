@@ -28,6 +28,7 @@ jobs:
         service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
         export_default_credentials: true
     - run: |
+        cd gke_workout
         pwd
         ls -la
         gcloud info
