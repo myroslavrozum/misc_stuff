@@ -28,10 +28,11 @@ jobs:
         project_id: ${{ secrets.PROJECT_ID }}
         service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
         export_default_credentials: true
-    - run: echo Triggered by ${{ env.GITHUB_SHA }}
-      working-directory: ${{ env.PROJ }}
+    - run: echo Triggered by ${{ GITHUB_SHA }}
     - run: |
         #cd ${{ env.PROJ }}
         pwd
         ls -la
         gcloud info
+        
+      working-directory: ${{ env.PROJ }}
