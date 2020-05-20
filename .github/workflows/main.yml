@@ -30,7 +30,7 @@ jobs:
         export_default_credentials: true
     - run: |
         cd ${{ env.PROJ }}
-        echo ${{ GITHUB_SHA }}
+        echo ${{ env.GITHUB_SHA }}
         pwd
         ls -la
         gcloud info
