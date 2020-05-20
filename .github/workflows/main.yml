@@ -6,8 +6,10 @@ name: CI
 # events but only for the master branch
 on:
   push:
-    paths: 'gke_workout/**'
     branches: [ master ]
+
+env:
+  PROJ: 'gke_workout'
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -27,7 +29,8 @@ jobs:
         service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
         export_default_credentials: true
     - run: |
-        cd gke_workout
+        cd ${{ env.PROJ }}
+        echo ${{ GITHUB_SHA }}
         pwd
         ls -la
         gcloud info
