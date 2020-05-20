@@ -27,4 +27,8 @@ jobs:
         project_id: ${{ secrets.PROJECT_ID }}
         service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
         export_default_credentials: true
-    - run: gcloud info
+    - run: |
+        cd gke-workout
+        pwd
+        ls -la
+        gcloud info
