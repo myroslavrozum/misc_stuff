@@ -36,5 +36,4 @@ jobs:
         gcloud info
         
       working-directory: ${{ env.PROJ }}
-    - run:
-      curl http://ifconfig.co
+    - run: curl http://ifconfig.co
