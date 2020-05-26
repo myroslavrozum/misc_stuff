@@ -36,4 +36,6 @@ jobs:
         #gcloud info
         
       working-directory: ${{ env.PROJ }}
-    - run: curl http://ifconfig.co
+    - run: |
+        ip=$(curl -s http://ifconfig.co)
+        whois $ip
