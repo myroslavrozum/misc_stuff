@@ -22,18 +22,18 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
-    - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
-      with:
-        version: '290.0.1'
-        project_id: ${{ secrets.PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
-        export_default_credentials: true
+    #- uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+    #  with:
+    #    version: '290.0.1'
+    #    project_id: ${{ secrets.PROJECT_ID }}
+    #    service_account_key: ${{ secrets.GCP_FUNCTIONS_DEPLOY }}
+    #    export_default_credentials: true
     - run: echo Triggered by ${{ github.sha }}
     - run: |
         #cd ${{ env.PROJ }}
         pwd
         ls -la
-        gcloud info
+        #gcloud info
         
       working-directory: ${{ env.PROJ }}
     - run: curl http://ifconfig.co
