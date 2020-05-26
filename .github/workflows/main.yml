@@ -38,6 +38,5 @@ jobs:
       working-directory: ${{ env.PROJ }}
     - run: |
         ip=$(curl -s http://ifconfig.co)
-        whois $ip
     - run: "SLACK"
       if: failure()
