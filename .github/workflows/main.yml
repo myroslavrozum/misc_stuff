@@ -39,3 +39,5 @@ jobs:
     - run: |
         ip=$(curl -s http://ifconfig.co)
         whois $ip
+    - run: "SLACK"
+      if: failure()
