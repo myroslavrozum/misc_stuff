@@ -39,5 +39,7 @@ jobs:
     - run: |
         ip=$(curl -s http://ifconfig.co)
         exit 1
-    - run: curl -X POST --data '{"text":"${{ github.workflow }} failed, commit is ${{ github.sha }}"}' https://hooks.slack.com/services/${{ secrets.SLACK_WEBHOOK }}
+    - run: |
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"${{ github.workflow }} failed, commit is ${{ github.sha }}"}' https://hooks.slack.com/services/${{ secrets.SLACK_WEBHOOK }}
+
       if: failure()
