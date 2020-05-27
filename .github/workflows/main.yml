@@ -38,5 +38,8 @@ jobs:
       working-directory: ${{ env.PROJ }}
     - run: |
         ip=$(curl -s http://ifconfig.co)
-    - run: "SLACK"
+    - run: |
+        message=${{ github.workflow }}" failed, commit is "${{ github.sha }}
+        curl -X POST --data "{\"text\":\"${message}\"}" https://hooks.slack.com/services/${{ secrets.SLACK_WEBHOOK }}
+
       if: failure()
